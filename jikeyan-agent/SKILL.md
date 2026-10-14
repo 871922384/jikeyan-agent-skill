@@ -9,7 +9,7 @@ Read and write research projects (课题) through the Agent API.
 Base URL: `https://api.jikeyan.cn` (override with `JIKEYAN_API_BASE`).
 Helper: `scripts/jikeyan.sh`. Full table: `references/endpoints.md`.
 
-## 0. Auth &合规 (read first)
+## 0. Auth & 合规 (read first)
 
 - Key from env only: `Authorization: Bearer $JIKEYAN_API_KEY`. Never hard-code,
   log, or paste the key anywhere.
