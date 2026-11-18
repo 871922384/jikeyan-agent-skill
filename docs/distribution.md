@@ -94,11 +94,68 @@
   "Submit to Anthropic's directory" 流程（需 Rex 手动申请）。
 - 验证方式：`claude plugin validate ./`（需安装 Claude Code CLI；CI 里只做 JSON 结构检查）。
 
-## 4. 发版顺序 checklist（给 Rex）
+## 5. 社交预览图上传步骤（给 Rex：合并后在 GitHub 网页上设置）
+
+仓库已备好 `assets/social-preview.png`（1280×640，品牌深色渐变 `#0F2027→#203A43` +
+App Icon + 中英文 tagline，用 PIL 生成，见下方生成命令备查）。GitHub 不会自动用它，
+需手动上传：
+
+1. 打开 `https://github.com/871922384/jikeyan-agent-skill` → **Settings** → **General**。
+2. 拉到 **Social preview** → **Upload an image…** → 选择 `assets/social-preview.png`。
+3. 保存后发一条带链接的推文/即刻验证缓存刷新（GitHub 卡片缓存最长一周）。
+
+重新生成（品牌色/文案改了才需要）：
+
+```bash
+python3 - <<'EOF'
+# 见 feat/packaging 分支提交历史：PIL 渐变 + PingFang SC(Index 3) + assets/logo.png
+EOF
+```
+
+生成脚本以本次提交的 `assets/social-preview.png` 为准，字体用系统 PingFang SC，
+Linux CI 上如缺中文字体需先装 Noto Sans CJK 再跑。
+
+## 6. 只支持远程 MCP 的平台：现状与托管选项（不部署，只给方案）
+
+背景：扣子 Coze、Kimi 托管智能体、智谱 Managed Agents、百炼 Flow 智能体（自定义 MCP 的
+`http` 注册形态）都**不能跑用户本机的 stdio 进程**，只接受公网 HTTPS 的
+SSE / Streamable HTTP 端点。`jikeyan-mcp` 目前是 stdio 包，要上这些平台必须先有一层
+远程托管。本仓库**不部署任何服务**，以下只列选项与工作量，供 Rex 决策：
+
+| 选项 | 怎么做 | 费用/工作量 | 适合 |
+|---|---|---|---|
+| A. 百炼自定义 MCP → 脚本部署 | 把 stdio 包（`npx`/`uvx`）托管到函数计算 FC，按官方文档走“脚本部署” | 基础模式按调用时长约 0.000156 元/秒、无部署费；极速模式另收部署费约 0.000036 元/秒；工作量半天 | 已在用百炼智能体应用时最顺 |
+| B. 魔搭 MCP 广场托管 | PyPI 发 `jikeyan-mcp` 后在 `modelscope.cn/mcp/servers/create` 选“可托管部署”，平台自动托管并给专属 SSE URL | 免费额度内验证；工作量半天（含 PyPI 发包，见 §3.1） | 想同时进魔搭生态、被灵码/Kimi 一键接入 |
+| C. 自有服务器/VPS 常驻进程 | 在自己的云主机上跑 Streamable HTTP 版 `jikeyan-mcp`（需给包加一个 HTTP 传输入口，约半天开发量）+ 域名 + Bearer 鉴权 | 一台轻量云主机/月；工作量 1–2 天（含 HTTP 入口开发） | 要完全自主可控、长期运营 |
+
+注意：托管后 Agent Key 的传递方式要重新设计（stdio 是读本机环境变量，远端必须走
+Vault/请求头注入，绝不能把 key 写进公开配置），动手前先定鉴权方案。
+
+## 7. 国内平台上架清单（只准备材料，不提交）
+
+核实日期均为 2026-11-18；“未核实”= 翻遍官方文档没找到公开口径，不得当作承诺。
+
+| 平台 | 提交入口 | 所需材料 | 企业认证 | 状态 |
+|---|---|---|---|---|
+| 魔搭 ModelScope MCP 广场 | `https://modelscope.cn/mcp/servers/create?template=customize`（也支持从 GitHub 仓库创建） | 中英文名称、来源地址、MCP 配置 + 环境变量、完整 README；选“可托管部署”需先发 PyPI 包（`pyproject.toml` 含 `[project.scripts]` 入口） | 未核实（官方只要求注册登录 + 访问令牌） | 可备材料，待 PyPI 发包后提交 |
+| 百炼 OneKey MCP（云市场商品） | 云市场服务商控制台 → 商品管理 → 接入信息 → 接入类型选 OneKey MCP | MCP 协议链接（SSE/StreamableHttp 二选一）+ 鉴权 `Authorization` + SPI 接口（实例创建/过期/释放必选）+ `tools/list` 自测 + 商品信息（Logo、简介、≥2 条亮点、详情 4 模块、使用指南 PDF≤10M）+ 按量销售信息（credits 体验包总量 ≥1000）+ 计量出账自测证明 | 未核实（前提是“完成云市场服务商入驻”；且 OneKey 上架为**邀约制**） | 材料重，先观望邀约 |
+| 腾讯云 MCP 广场 | 无 | —— | —— | **不支持**：官方明确暂不提供第三方上架 |
+| 扣子 Coze 插件商店 | 开发平台 → 更多 → 社区 → 插件市场 → 上架插件；企业商店走工作空间上架 | 描述/使用说明/分类；基于 MCP 的插件要求 HTTPS 域名 URL（不支持裸 IP） | 个人上架公共商店是否需企业认证：未核实；企业商店需企业旗舰版 | 需先有远程 MCP 端点（见 §6） |
+| Kimi 开放平台 | 未核实公开上架入口（自定义技能/插件仅项目内可见） | —— | 未核实 | 观望 |
+| 智谱开放平台 | 未核实公开上架入口（控制台技能市场仅“查看并安装”） | —— | 未核实 | 观望 |
+| 字节 Trae 市场 | 未核实上架入口与审核要求（企业版有“企业技能”管理） | —— | 未核实 | 观望 |
+| 腾讯 CodeBuddy 插件市场 | 自建市场仓库 + `plugin.json`（`name/description/version/author` 必备）+ README + 安全自查；用户侧 `/plugin marketplace add <owner/repo>` | 完整 `plugin.json` + README | 未核实 | 可备材料（本仓库插件结构已就绪） |
+
+通用备料（现在就能准备、不依赖任何平台）：`assets/logo.png`（1024 官方 App Icon）、
+`assets/screenshots/*.png`（3 张演示数据截图）、中英文简介各一段（见仓库 Description 建议 §2）、
+MIT LICENSE、PyPI 包 `jikeyan-mcp 0.2.0`（它是魔搭/百炼托管的前置）。
+
+## 8. 发版顺序 checklist（给 Rex）
 
 1. 合并 `feat/packaging` 到 `main`。
-2. 在 GitHub 网页设置 description / homepage / topics（见 §2）。
+2. 在 GitHub 网页设置 description / homepage / topics（见 §2）+ 上传社交预览图（见 §5）。
 3. 发 PyPI `jikeyan-mcp 0.2.0`（§3.1），验证 `uvx jikeyan-mcp`。
 4. 发官方 MCP Registry（§3.2）。
 5. Smithery（§3.3）、Glama（§3.4）、mcpservers.org（§3.5）。
 6. awesome PR 若干（§3.6）。
+7. 国内：PyPI 发包后视情况备料魔搭 MCP 广场（§7）；远程 MCP 托管方案（§6）按需决策。
