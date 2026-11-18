@@ -21,7 +21,7 @@
 
 ## 安装
 
-需要 Python 3.10+。最简单的方式（包发布到 PyPI 后）：
+需要 Python 3.11+。最简单的方式（包发布到 PyPI 后）：
 
 ```bash
 uvx jikeyan-mcp
