@@ -1,2 +1,0 @@
-[console_scripts]
-jikeyan-mcp = jikeyan_mcp.server:run
