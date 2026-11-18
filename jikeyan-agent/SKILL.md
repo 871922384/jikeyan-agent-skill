@@ -1,18 +1,21 @@
 ---
 name: jikeyan-agent
-description: Use when reading or writing 极科研 (jikeyan) research projects via the Agent API. Triggers: 极科研, jikeyan, 课题, 节点, 等待项, 投稿.
+description: Use when reading or writing 极科研 (jikeyan) research projects via the Agent API. Triggers: 极科研, jikeyan, 项目, 节点, 等待项, 投稿.
 ---
 
 # 极科研 (jikeyan) Agent API
 
-Read and write research projects (课题) through the Agent API.
+Read and write research projects (项目) through the Agent API.
 Base URL: `https://api.jikeyan.cn` (override with `JIKEYAN_API_BASE`).
 Helper: `scripts/jikeyan.sh`. Full table: `references/endpoints.md`.
+Authoritative online guide: `https://api.jikeyan.cn/agent.md` — fetch it when in doubt.
 
 ## 0. Auth & 合规 (read first)
 
-- Key from env only: `Authorization: Bearer $JIKEYAN_API_KEY`. Never hard-code,
-  log, or paste the key anywhere.
+- Key from env only: `Authorization: Bearer $JIKEYAN_AGENT_KEY`. Never hard-code,
+  log, or paste the key anywhere. The user creates the key in the App
+  (设置 → 连接智能体) and pastes it into `JIKEYAN_AGENT_KEY` (or their agent's
+  secret config) themselves.
 - **Never send patient names, hospital IDs, diagnoses, or follow-up text.**
   The API has no fields for them; unknown fields are rejected — keep it that way.
 
@@ -28,7 +31,7 @@ scripts/jikeyan.sh get /api/v1/agent/schema
 It returns `templates` (per-`template_id` stage list, plus `paused`),
 `node_kinds`, `submission_statuses`, `waiting_item_statuses`,
 `operations` (allowed fields per action), `limits`, and `guide_markdown`.
-Trust it over memory.
+Trust it over memory. Never hard-code enums.
 
 ## 2. Reads
 
@@ -37,6 +40,7 @@ scripts/jikeyan.sh get "/api/v1/agent/projects"                          # list 
 scripts/jikeyan.sh get "/api/v1/agent/projects?external_ref=<ref>"       # lookup by ref
 scripts/jikeyan.sh get "/api/v1/agent/projects/<project_id>"             # detail
 scripts/jikeyan.sh get "/api/v1/agent/today?tz=Asia%2FShanghai"           # today's work
+scripts/jikeyan.sh get "/api/v1/agent/changes?limit=50"                   # incremental change feed
 ```
 
 - Detail returns `project` (note `project.version`), `open_nodes`,
@@ -44,6 +48,8 @@ scripts/jikeyan.sh get "/api/v1/agent/today?tz=Asia%2FShanghai"           # toda
 - `today` returns `overdue`, `due_soon` (7d), `waiting_to_check`, `recent_updates`
   (48h, excludes your own `source=user` notes). `tz` is an IANA zone, default `Asia/Shanghai`.
 - Waiting items without `next_check_at` never appear in `today` — always set it.
+- `changes` returns field names only (no values) plus `next_cursor` for polling;
+  re-read the project with `GET .../projects/<id>` for values.
 
 ## 3. Create (idempotent via external_ref)
 
@@ -57,14 +63,17 @@ scripts/jikeyan.sh post /api/v1/agent/projects \
   snapshot (`action_receipts[0].summary` = "已存在，未重复创建"), no duplicate.
 - Archived projects are excluded from dedup (reusing a ref after archiving creates new).
 - Batch import: `POST` with `external_ref`, then one `PATCH` carrying all `operations`.
+- Every write endpoint accepts `?dry_run=true`: same validation and receipt shape
+  with `"dry_run": true`, but nothing is stored. Prefer a dry run before the first
+  real write.
 
 ## 4. Patch (read → write with version)
 
 1. `GET` the project, note `project.version`.
 2. `PATCH` with equal `base_version`. `changed_fields` may set `title`,
-   `objective`, `status_note` (≤120), `stage`, `owner_label`;
-   `stage` must be in the project's template stage table (else 422).
-   Every operation's `project_id` must equal the URL project.
+    `objective`, `status_note` (≤120), `stage`, `owner_label`;
+    `stage` must be in the project's template stage table (else 422).
+    Every operation's `project_id` must equal the URL project.
 
 ```bash
 scripts/jikeyan.sh patch /api/v1/agent/projects/<id> \
@@ -96,9 +105,12 @@ Operations (`action`, `project_id`, `target_id` empty = create):
 scripts/jikeyan.sh post /api/v1/agent/projects/<id>/archive
 ```
 
+Supports `?dry_run=true`. Archiving is not reversible in this version.
+
 ## 6. Errors
 
-Failure shape keeps `code`/`detail` plus actionable `details`:
+Failure shape keeps `code`/`detail` plus machine-readable `details` and a fixed
+`hint` for self-correction:
 
 ```json
 {"code":"HTTP_ERROR","detail":"invalid_stage","details":{"field":"stage","allowed":[...]}}
@@ -112,6 +124,8 @@ Failure shape keeps `code`/`detail` plus actionable `details`:
 | `target_required` / `target_not_found_or_forbidden` | pass a valid `target_id` of the same project |
 | `operation_project_mismatch` | operation `project_id` ≠ URL project |
 | `invalid_datetime` / `invalid_timezone` | ISO-8601 datetime or valid IANA zone |
+| `unauthorized` (401) | key revoked or replaced — ask the user to regenerate it in the App (设置 → 连接智能体) |
+| `agent_rate_limited` (429) | slow down; honour the `Retry-After` response header (seconds) |
 
 ## 7. Dates
 
