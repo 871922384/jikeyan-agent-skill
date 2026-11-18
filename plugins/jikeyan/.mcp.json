@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "jikeyan": {
+      "command": "uvx",
+      "args": ["jikeyan-mcp"]
+    }
+  }
+}

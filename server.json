@@ -1,0 +1,49 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.871922384/jikeyan-agent-skill",
+  "title": "极科研 jikeyan",
+  "description": "Official 极科研 MCP server: manage research projects, deadlines, reviews, submissions.",
+  "websiteUrl": "https://jikeyan.cn",
+  "repository": {
+    "url": "https://github.com/871922384/jikeyan-agent-skill",
+    "source": "github"
+  },
+  "version": "0.2.0",
+  "packages": [
+    {
+      "registryType": "pypi",
+      "registryBaseUrl": "https://pypi.org",
+      "identifier": "jikeyan-mcp",
+      "version": "0.2.0",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "name": "JIKEYAN_AGENT_KEY",
+          "description": "Agent Key generated in the 极科研 app (Settings → Connect Agent)",
+          "isRequired": true,
+          "isSecret": true
+        },
+        {
+          "name": "JIKEYAN_API_BASE_URL",
+          "description": "API root, defaults to https://api.jikeyan.cn",
+          "isRequired": false,
+          "isSecret": false
+        },
+        {
+          "name": "JIKEYAN_CONTACT_EMAIL",
+          "description": "Your contact email for Crossref/NCBI/ClinicalTrials.gov lookups (reference verification, topic screening)",
+          "isRequired": false,
+          "isSecret": false
+        },
+        {
+          "name": "NCBI_API_KEY",
+          "description": "Optional PubMed API key (higher rate limits)",
+          "isRequired": false,
+          "isSecret": true
+        }
+      ]
+    }
+  ]
+}

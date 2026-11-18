@@ -1,0 +1,15 @@
+{
+  "name": "jikeyan",
+  "description": "Official 极科研 (jikeyan) skills: research project management for AI agents",
+  "owner": {
+    "name": "jikeyan",
+    "url": "https://jikeyan.cn"
+  },
+  "plugins": [
+    {
+      "name": "jikeyan",
+      "source": "./plugins/jikeyan",
+      "description": "Research project management skills + MCP server (daily review, waiting items, submissions, review rounds)"
+    }
+  ]
+}
