@@ -1,6 +1,6 @@
 [project]
 name = "jikeyan-mcp"
-version = "0.2.0"
+version = "0.2.1"
 description = "Official MCP server for 极科研 (jikeyan): manage research projects from your AI agent"
 readme = "README.md"
 license = { text = "MIT" }

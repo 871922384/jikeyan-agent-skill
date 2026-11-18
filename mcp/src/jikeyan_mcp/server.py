@@ -18,6 +18,7 @@ from jikeyan_mcp import __version__
 from jikeyan_mcp.client import AgentApiClient
 from jikeyan_mcp.config import Config
 from jikeyan_mcp.descriptions import apply_schema
+from jikeyan_mcp.prompts import register_prompts
 from jikeyan_mcp.schema import AgentSchema
 from jikeyan_mcp.tools import (
     ALL_TOOLS,
@@ -37,6 +38,9 @@ def _instructions() -> str:
         "极科研课题管理工具。每个工具对应一组意图，而不是一条 REST 路径。\n"
         "建议顺序：先 get_schema 取枚举与长度上限，再 list_projects / get_project 读现状，\n"
         "再 upsert_node / upsert_waiting_item 写，最后 get_today 看今天。\n"
+        "第一次对话先开场：静默调用 get_schema → get_today → list_projects，再用\n"
+        "schema.welcome（缺失时按 `jikeyan_welcome` prompt 的兜底路径）按用户语言说开场白、\n"
+        "列能力、给 3 条建议；遵守 tone，不念工具名、不提密钥。\n"
         f"{privacy_suffix()}\n"
         "服务端错误会带 code / detail / hint；请按 hint 自行修正后重试一次。"
     )
@@ -115,6 +119,7 @@ def build_server(
         lifespan=lifespan,
         context=context,
     )
+    register_prompts(server)
 
     for tool in ALL_TOOLS:
         server.tool(

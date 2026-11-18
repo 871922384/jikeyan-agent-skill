@@ -13,7 +13,7 @@ from __future__ import annotations
 
 __all__ = ["__version__", "build_server"]
 
-__version__ = "0.2.0"
+__version__ = "0.2.1"
 
 
 def build_server(*args, **kwargs):

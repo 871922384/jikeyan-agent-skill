@@ -63,6 +63,31 @@ follow-ups on your behalf.
 | 🔍 Verify references & screen topics | Check BibTeX metadata against Crossref/PubMed; screen ClinicalTrials.gov + PubMed reviews (runs locally, never touches the jikeyan server) |
 | 🔄 Weekly review | What got done, what's due next, what's stalled, what needs your decision |
 
+### What the first conversation looks like
+
+The agent greets you with a live summary of your board (demo data below — not real projects),
+then waits for your pick. No endpoints, no keys, just the work:
+
+> **Agent:** Hi! I've taken over your Jikeyan project board, and every change will show
+> up on your phone. You have 3 active projects, 1 of them overdue and worth tackling
+> first, plus 2 waiting items due for a follow-up today. Where should we start?
+> I can update stages and deadlines, chase ethics approvals and collaborator replies,
+> log submissions and review rounds — for example:
+> ① add your breast-cancer prognosis study (first draft due next Friday),
+> ② check what's waiting on replies today, ③ log the major-revision round that just came back.
+>
+> **You:** Let's do ② — what's waiting on replies today?
+>
+> **Agent:** Two things: the ethics approval has been with the committee for 12 days
+> (I drafted a polite chase note — say the word and I'll finalize the wording for you
+> to send), and Dr. Li's pathology feedback was due yesterday. Want me to set both
+> to re-check tomorrow morning?
+>
+> **You:** Yes, and log the major revision as round two while you're at it.
+>
+> **Agent:** Done — both waiting items will resurface in tomorrow's brief, and round two
+> is logged with a response deadline 4 weeks out. Anything else to push forward today?
+
 ## Quickstart
 
 **1. Generate a key** — in the 极科研 app: **设置 → 连接智能体** (Settings → Connect Agent).
