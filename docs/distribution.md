@@ -9,8 +9,8 @@
 |---|---|---|
 | `.claude-plugin/marketplace.json` | Claude Code《Create a marketplace》：顶层 `name` + `owner` + `plugins[]`，entry 需 `name` + `source`（本仓库用相对路径 `./plugins/jikeyan`），entry 名须与 `plugin.json` 的 `name` 一致 | https://code.claude.com/docs/en/plugin-marketplaces.md |
 | `plugins/jikeyan/.claude-plugin/plugin.json` | Claude Code《Plugin manifest reference》：`name` 必填（kebab-case），`version`/`description`/`author` 缺失会报 warning；`mcpServers` 等组件路径须在插件目录内 | https://code.claude.com/docs/en/plugins/manifest-reference.md |
-| `plugins/jikeyan/.mcp.json` | 同上：插件根目录 `.mcp.json` 会自动加载为 MCP 服务定义，`command: uvx + args: [jikeyan-mcp]` | https://code.claude.com/docs/en/plugins/manifest-reference.md |
-| `server.json` | MCP Registry《server.json Format Specification》+《Official Registry Requirements》+《Package Types》：`$schema` 固定为 `https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json`；`description` ≤ 100 字符（本文件 83）；PyPI 包用 `registryType: pypi` + `registryBaseUrl: https://pypi.org`；PyPI 所有权验证靠包 README（含 PyPI 描述页）里的 `mcp-name: <server-name>` 字符串（已写入 `mcp/README.md` 首部注释） | https://github.com/modelcontextprotocol/registry/blob/main/docs/reference/server-json/generic-server-json.md · https://github.com/modelcontextprotocol/registry/blob/main/docs/reference/server-json/official-registry-requirements.md · https://github.com/modelcontextprotocol/registry/blob/main/docs/modelcontextprotocol-io/package-types.mdx · 发布流程 https://modelcontextprotocol.io/registry/quickstart |
+| `plugins/jikeyan/.mcp.json` | 同上：插件根目录 `.mcp.json` 会自动加载为 MCP 服务定义，`command: uvx` + git 形态 `args`（`--from git+https://…#subdirectory=mcp`，PyPI 不可用期间的写法，见其文件内容） | https://code.claude.com/docs/en/plugins/manifest-reference.md |
+| `server.json` | MCP Registry《server.json Format Specification》+《Official Registry Requirements》+《Package Types》：`$schema` 固定为 `https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json`；`description` ≤ 100 字符（本文件 83）；OCI 包用 `registryType: oci` + `identifier: ghcr.io/871922384/jikeyan-mcp:<version>`（`version` 与 tag 一致）；OCI 所有权验证靠镜像的 `io.modelcontextprotocol.server.name` label/注解（值须等于 `server.json` 的 `name`），见 `mcp/Dockerfile` | https://github.com/modelcontextprotocol/registry/blob/main/docs/reference/server-json/generic-server-json.md · https://github.com/modelcontextprotocol/registry/blob/main/docs/reference/server-json/official-registry-requirements.md · https://github.com/modelcontextprotocol/registry/blob/main/docs/modelcontextprotocol-io/package-types.mdx · 发布流程 https://modelcontextprotocol.io/registry/quickstart |
 | `smithery.yaml` | Smithery stdio 部署格式：`startCommand.type: stdio` + `configSchema`（JSON Schema）+ `commandFunction`（`(config) => ({command, args, env})`）。本文件 `uvx jikeyan-mcp`，全部配置项可选 | https://smithery.ai （registry）及已部署的 stdio 范例；配置参考入口 https://smithery.ai/docs |
 | `llms.txt` | llms.txt v2 提案：H1 项目名 + blockquote 摘要 + H2 文件列表（含链接与说明） | https://llmstxt.org/ |
 
@@ -32,58 +32,102 @@
 
 ## 3. 需要 Rex 亲自提交的平台清单与步骤
 
-顺序建议：先 **PyPI**（它是 MCP Registry 与 `uvx` 的前置），再各目录。
+顺序建议：先 **GHCR 镜像**（MCP Registry 的前置，无需任何新账号），再各目录。
+PyPI 账号注册被 hCaptcha 卡住，暂时不可用，相关 job 默认跳过（见 §3.1）。
 
-### 3.1 PyPI：`jikeyan-mcp`（前置，全自动）
+### 3.1 PyPI：`jikeyan-mcp`（暂缓，默认跳过）
 
-发版全自动：`.github/workflows/release.yml` 在 push `v*` tag（或手动
-workflow_dispatch）时依次发布 PyPI → 官方 MCP Registry，**不需要任何长期密钥**
-（PyPI 用 Trusted Publishing 的 OIDC，Registry 用 `github-oidc` 登录）。
+现状：`release.yml` 的 `pypi` job 有 `if: vars.PUBLISH_PYPI == 'true'` 开关，
+仓库未设该变量时默认跳过，不影响 GHCR → MCP Registry 主链路。
 
-维护者**一次性**操作（只需做一次）：
+PyPI 账号恢复后，启用步骤：
 
-1. 在 https://pypi.org 登录 → Account settings → Publishing → Add a new pending
-   publisher，填写：
-   - PyPI Project Name：`jikeyan-mcp`
-   - Owner：`871922384`
-   - Repository：`jikeyan-agent-skill`
-   - Workflow：`release.yml`
-   - Environment：`pypi`
-2. GitHub 仓库 → Settings → Environments → New environment，新建名为 `pypi`
-   的 environment（名称须与 workflow 中的 `environment: pypi` 一致，
-   Trusted Publishing 靠它做 audience/权限绑定）。
+1. 一次性操作（只需做一次）：
+   - 在 https://pypi.org 登录 → Account settings → Publishing → Add a new pending
+     publisher，填写：PyPI Project Name `jikeyan-mcp`、Owner `871922384`、
+     Repository `jikeyan-agent-skill`、Workflow `release.yml`、Environment `pypi`。
+   - GitHub 仓库 → Settings → Environments → New environment，新建名为 `pypi`
+     的 environment（名称须与 workflow 中的 `environment: pypi` 一致）。
+   - GitHub 仓库 → Settings → Secrets and variables → Actions → Variables →
+     New repository variable，新建 `PUBLISH_PYPI` = `true`。
+2. 把 `server.json` 的 PyPI 包条目加回来（与 OCI 条目并列，`packages` 数组可放多个包）。
+   在现有 OCI 包之后插入：
 
-之后每次发版只需（tag 版本须与 `mcp/pyproject.toml`、`server.json` 的
-`version` 及 `packages[0].version` 三处一致，否则 CI 直接失败）：
+   ```json
+   {
+     "registryType": "pypi",
+     "registryBaseUrl": "https://pypi.org",
+     "identifier": "jikeyan-mcp",
+     "version": "0.2.1",
+     "transport": { "type": "stdio" },
+     "environmentVariables": [
+       { "name": "JIKEYAN_AGENT_KEY", "description": "Agent Key generated in the 极科研 app (Settings → Connect Agent)", "isRequired": true, "isSecret": true },
+       { "name": "JIKEYAN_API_BASE_URL", "description": "API root, defaults to https://api.jikeyan.cn", "isRequired": false, "isSecret": false },
+       { "name": "JIKEYAN_CONTACT_EMAIL", "description": "Your contact email for Crossref/NCBI/ClinicalTrials.gov lookups (reference verification, topic screening)", "isRequired": false, "isSecret": false },
+       { "name": "NCBI_API_KEY", "description": "Optional PubMed API key (higher rate limits)", "isRequired": false, "isSecret": true }
+     ]
+   }
+   ```
 
-```bash
-git checkout main && git pull
-# 先把三处版本号改成新版本并提交，然后：
-git tag v0.2.1 && git push origin v0.2.1
-```
-
-验证：`uvx jikeyan-mcp --help` 在一台干净机器上能跑（会提示缺 key 并退出码 1，属于正常）。
-注意：包 README（即 PyPI 描述页）首部已有 `<!-- mcp-name: io.github.871922384/jikeyan-agent-skill -->`，
-这是 MCP Registry PyPI 所有权验证的依据，**不要删**。
+   注意：`version` 须与 `server.json` 的 `version`、OCI 包的 `version`/identifier tag、
+   `mcp/pyproject.toml` 的 `version` 四处一致（CI 与 `scripts/check_manifests.py`
+   会校验；`check_manifests.py` 也要同步放宽为“OCI 必有、PyPI 可选”的检查）。
+   PyPI 所有权验证靠包 README（含 PyPI 描述页）里的
+   `mcp-name: <server-name>` 字符串——`mcp/README.md` 首部注释
+   `<!-- mcp-name: io.github.871922384/jikeyan-agent-skill -->` 一直保留着，
+   就是为这一天准备的，**不要删**。
+3. 发版验证：`uvx jikeyan-mcp --help` 在一台干净机器上能跑（会提示缺 key 并退出码 1，属于正常）。
 
 备选（CI 挂掉时才用）：本地 `cd mcp && uv build && twine upload dist/*`
 （需先在 PyPI 配好 API token）。
 
 ### 3.2 官方 MCP Registry（全自动，无需手动）
 
-- 指南：https://modelcontextprotocol.io/registry/quickstart（发布流程）
-  与 https://modelcontextprotocol.io/registry/github-actions（GitHub Actions 自动发布）。
-- 同一个 `release.yml` 的 `mcp-registry` job（`needs: pypi`）会自动做：
-  轮询 PyPI JSON API 等待新版本可见（最多 ~5 分钟）→ 按官方文档方式下载并
-  Sigstore 验签 `mcp-publisher`（版本 pin 在 workflow 的 `MCP_PUBLISHER_VERSION`）
-  → `mcp-publisher login github-oidc`（OIDC，无长期 token）→
-  在仓库根目录 `mcp-publisher publish`（读取本仓库 `server.json`）→
+发版全自动：`.github/workflows/release.yml` 在 push `v*` tag（或手动
+workflow_dispatch）时先构建并推送 GHCR 镜像，再发布官方 MCP Registry，
+**不需要任何长期密钥**（GHCR 登录用 `GITHUB_TOKEN`，Registry 用 `github-oidc` 登录）。
+
+维护者**一次性**操作（只需做一次，Rex 手动处理）：
+
+1. 首次推送后，把 GHCR 包设为公开：打开
+   `https://github.com/users/871922384/packages/container/jikeyan-mcp/settings`
+   → Danger Zone → Change visibility → Public。
+   （`GITHUB_TOKEN` 无权改包可见性，API 也调不了，只能网页点。
+   公开仓库首次推送的包通常默认公开，但必须来这里确认一眼，
+   否则 Registry 验签时拉不到镜像。）
+2. 确认 `mcp/Dockerfile` 的
+   `LABEL io.modelcontextprotocol.server.name` 值与 `server.json` 的 `name`
+   完全一致（改名时两处一起改）。
+
+之后每次发版（四处版本号必须一致，否则 CI 直接失败）：
+
+- `mcp/pyproject.toml` 的 `version`
+- `server.json` 的 `version`
+- `server.json` 的 `packages[0].version`
+- `server.json` 的 `packages[0].identifier` 的 tag（`ghcr.io/871922384/jikeyan-mcp:<version>`）
+
+```bash
+git checkout main && git pull
+# 先把四处版本号改成新版本并提交，然后：
+git tag v0.2.1 && git push origin v0.2.1
+```
+
+CI 链路（`ghcr` job → `mcp-registry` job）：
+
+- `ghcr` job：QEMU + Buildx 多架构构建（`linux/amd64,linux/arm64`），
+  推送 `ghcr.io/871922384/jikeyan-mcp:<version>` 与 `:latest` 两个 tag。
+- `mcp-registry` job（`needs: ghcr`）：匿名拉取 GHCR manifest 确认镜像可见
+  （最多等 ~5 分钟）→ 按官方文档方式下载并 Sigstore 验签 `mcp-publisher`
+  （版本 pin 在 workflow 的 `MCP_PUBLISHER_VERSION`）→
+  `mcp-publisher login github-oidc`（OIDC，无长期 token）→
+  在仓库根目录 `mcp-publisher publish`（读取本仓库 `server.json`；
+  发布时会校验镜像的 `io.modelcontextprotocol.server.name` label）→
   `curl` registry 搜索接口验证。
-- 前置：PyPI 包已发布且版本号与 `server.json` 的 `version` 一致；
-  `name` 命名空间 `io.github.871922384` 由同名 GitHub 账号的 OIDC 身份验证。
+- 前置：`name` 命名空间 `io.github.871922384` 由同名 GitHub 账号的 OIDC 身份验证。
 - Registry 目前为 preview，提示 breaking change / 数据重置属正常。
 - 备选（CI 挂掉时才用）：本地装 `mcp-publisher` 后 `mcp-publisher login github`
-  再 `mcp-publisher publish`。
+  再 `mcp-publisher publish`；镜像备选本地 `docker build -f mcp/Dockerfile ./mcp`
+  后 `docker push`（需 `docker login ghcr.io`）。
 
 ### 3.3 Smithery
 
@@ -98,8 +142,8 @@ git tag v0.2.1 && git push origin v0.2.1
   多数几分钟内通过并可搜索到。参考：https://glama.ai/mcp/faq
 - 可选：在仓库根加 `glama.json`（`{"$schema": "https://glama.ai/mcp/schemas/server.json", "maintainers": ["<github-username>"]}`）
   声明维护人；本仓库暂未加，如 Glama 要求再补。
-- 注意：Glama 从源码构建运行服务，可能要求仓库有可构建的服务形态；当前 `mcp/` 是
-  `uvx`-from-PyPI 形态，若 Glama 构建失败，可补一个最小 `Dockerfile` 再试。
+- 注意：Glama 从源码构建运行服务；本仓库已有 `mcp/Dockerfile`
+  （`uvx`-from-git 与 GHCR 镜像两种形态，见 MCP 配置片段），若 Glama 构建失败再按其报错调整。
 
 ### 3.5 mcpservers.org（wong2/awesome-mcp-servers 的提交入口）
 
@@ -180,12 +224,16 @@ MIT LICENSE、PyPI 包 `jikeyan-mcp 0.2.0`（它是魔搭/百炼托管的前置�
 ## 8. 发版顺序 checklist（给 Rex）
 
 1. 合并本分支到 `main`。
-2. 一次性操作：PyPI 上加 pending publisher + GitHub 上建 `pypi` environment（见 §3.1）。
+2. 一次性操作：首次推送后把 GHCR 包设为公开（见 §3.2）。
 3. 在 GitHub 网页上设置 description / homepage / topics（见 §2）+ 上传社交预览图（见 §5）。
-4. 改三处版本号（`mcp/pyproject.toml`、`server.json` 的 `version` 与
-   `packages[0].version`，三者必须一致）→ 提交 → `git tag vX.Y.Z && git push origin vX.Y.Z`，
-   CI 自动发 PyPI（§3.1）+ 官方 MCP Registry（§3.2）；失败时看 Actions 日志，备选手动步骤见 §3.1/§3.2 末尾一行。
-5. 发完验证 `uvx jikeyan-mcp --help`。
+4. 改四处版本号（`mcp/pyproject.toml`、`server.json` 的 `version`、
+   `packages[0].version` 与 identifier tag，四者必须一致）→ 提交 →
+   `git tag vX.Y.Z && git push origin vX.Y.Z`，
+   CI 自动推 GHCR 镜像 + 发官方 MCP Registry（§3.2）；失败时看 Actions 日志，备选手动步骤见 §3.2 末尾一行。
+5. 发完验证（都不需要 PyPI）：
+   `docker run -i --rm ghcr.io/871922384/jikeyan-mcp:<version>`（无 key 应报缺 key 退出）；
+   `uvx --from "git+https://github.com/871922384/jikeyan-agent-skill#subdirectory=mcp" jikeyan-mcp` 同样行为。
 6. Smithery（§3.3）、Glama（§3.4）、mcpservers.org（§3.5）。
 7. awesome PR 若干（§3.6）。
-8. 国内：PyPI 发包后视情况备料魔搭 MCP 广场（§7）；远程 MCP 托管方案（§6）按需决策。
+8. 国内：魔搭 MCP 广场备料（§7，托管形态待 PyPI 恢复，见 §3.1）；远程 MCP 托管方案（§6）按需决策。
+9. PyPI 账号恢复后：按 §3.1 把 `PUBLISH_PYPI` 打开并加回 PyPI 包条目。

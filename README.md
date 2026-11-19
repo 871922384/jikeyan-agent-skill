@@ -120,18 +120,46 @@ Skill (recommended):
 
 Portable fallback: copy `plugins/jikeyan/skills/*` to `~/.claude/skills/`.
 
-MCP server (`.mcp.json`, project-level — keep uncommitted if it holds your key):
+MCP server (`.mcp.json`, project-level — keep uncommitted if it holds your key;
+no PyPI needed, pick the uvx line or the docker line):
 
 ```json
 {
   "mcpServers": {
     "jikeyan": {
       "command": "uvx",
-      "args": ["jikeyan-mcp"],
+      "args": [
+        "--from",
+        "git+https://github.com/871922384/jikeyan-agent-skill#subdirectory=mcp",
+        "jikeyan-mcp"
+      ],
       "env": {
         "JIKEYAN_AGENT_KEY": "${JIKEYAN_AGENT_KEY}",
         "JIKEYAN_API_BASE_URL": "https://api.jikeyan.cn"
       }
+    }
+  }
+}
+```
+
+Docker alternative (no local Python needed; pin a version tag from
+`server.json`, `latest` also works):
+
+```json
+{
+  "mcpServers": {
+    "jikeyan": {
+      "command": "docker",
+      "args": [
+        "run",
+        "-i",
+        "--rm",
+        "-e",
+        "JIKEYAN_AGENT_KEY",
+        "-e",
+        "JIKEYAN_API_BASE_URL=https://api.jikeyan.cn",
+        "ghcr.io/871922384/jikeyan-mcp:latest"
+      ]
     }
   }
 }
@@ -144,13 +172,20 @@ MCP server (`.mcp.json`, project-level — keep uncommitted if it holds your key
 
 Skill: copy `plugins/jikeyan/skills/*` to `~/.codex/skills/`.
 
-MCP server:
+MCP server (no PyPI needed):
 
 ```bash
 codex mcp add jikeyan \
   --env JIKEYAN_AGENT_KEY="$JIKEYAN_AGENT_KEY" \
   --env JIKEYAN_API_BASE_URL=https://api.jikeyan.cn \
-  -- uvx jikeyan-mcp
+  -- uvx --from "git+https://github.com/871922384/jikeyan-agent-skill#subdirectory=mcp" jikeyan-mcp
+```
+
+Docker alternative:
+
+```bash
+codex mcp add jikeyan \
+  -- docker run -i --rm -e JIKEYAN_AGENT_KEY -e JIKEYAN_API_BASE_URL=https://api.jikeyan.cn ghcr.io/871922384/jikeyan-mcp:latest
 ```
 
 </details>
@@ -158,14 +193,16 @@ codex mcp add jikeyan \
 <details>
 <summary><strong>Cursor / Windsurf / Gemini CLI / other MCP clients</strong></summary>
 
-Add a stdio server with command `uvx`, args `["jikeyan-mcp"]`, and environment variables
+Add a stdio server with environment variables
 `JIKEYAN_AGENT_KEY` + `JIKEYAN_API_BASE_URL=https://api.jikeyan.cn`.
-Or copy `plugins/jikeyan/skills/*` to the client's skills directory.
-
-`uvx jikeyan-mcp` needs the `jikeyan-mcp` package on PyPI; until then:
+No PyPI needed — pick one launch command:
 
 ```bash
-uvx --from "jikeyan-mcp @ git+https://github.com/871922384/jikeyan-agent-skill#subdirectory=mcp" jikeyan-mcp
+uvx --from "git+https://github.com/871922384/jikeyan-agent-skill#subdirectory=mcp" jikeyan-mcp
+```
+
+```bash
+docker run -i --rm -e JIKEYAN_AGENT_KEY ghcr.io/871922384/jikeyan-mcp:latest
 ```
 
 Plain-HTTP alternative (no MCP): `plugins/jikeyan/skills/jikeyan-agent/scripts/jikeyan.sh`
@@ -180,7 +217,8 @@ Full copy-paste configs live in [README.zh-CN.md](README.zh-CN.md#在国内-agen
 CodeBuddy & WorkBuddy （腾讯）, Qwen Code CLI, 通义灵码/Qoder, 百炼智能体应用， Trae, 扣子 Coze,
 ModelScope MCP 广场， Kimi & 智谱托管智能体（远程 MCP）。
 
-Mainland mirrors (PyPI is otherwise slow; the API itself needs no proxy):
+Mainland mirrors (only needed after the PyPI release; the API itself needs no proxy).
+Until then use the git `uvx --from …` or the GHCR docker image above:
 
 ```bash
 # uv / pip via Tsinghua or Aliyun mirror

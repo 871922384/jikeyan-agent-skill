@@ -21,25 +21,30 @@
 
 ## 安装
 
-需要 Python 3.11+。最简单的方式（包发布到 PyPI 后）：
+需要 Python 3.11+（本地运行方式）或 Docker（镜像方式）。PyPI 发布前没有
+`uvx jikeyan-mcp` 直装，以下两种方式都不依赖 PyPI：
+
+方式一：从 git 运行（推荐本机使用）：
 
 ```bash
-uvx jikeyan-mcp
+uvx --from "git+https://github.com/871922384/jikeyan-agent-skill#subdirectory=mcp" jikeyan-mcp
 ```
 
-PyPI 发布前，也可以用 git 直接运行：
+方式二：Docker 镜像（无需 Python 环境，版本号见
+[server.json](../server.json) 的 `packages[0].identifier`）：
 
 ```bash
-uvx --from "jikeyan-mcp @ git+https://github.com/871922384/jikeyan-agent-skill#subdirectory=mcp" jikeyan-mcp
+docker run -i --rm -e JIKEYAN_AGENT_KEY ghcr.io/871922384/jikeyan-mcp:latest
 ```
 
-或本地安装：
+或本地开发安装：
 
 ```bash
-pip install jikeyan-mcp        # PyPI 发布后
-pipx install jikeyan-mcp       # 隔离安装，同样提供 jikeyan-mcp 命令
-cd mcp && pip install -e '.[test]'   # 本仓库开发：可编辑安装 + 测试依赖
+cd mcp && pip install -e '.[test]'   # 可编辑安装 + 测试依赖
 ```
+
+PyPI 发布后会恢复 `uvx jikeyan-mcp` / `pip install jikeyan-mcp` 直装
+（见 [docs/distribution.md](../docs/distribution.md) §3.1）。
 
 ## 配置
 
@@ -64,18 +69,44 @@ Key 在 App 内生成：App 中 **设置 → 连接智能体** 生成 Agent Key�
 
 ## Claude Code 配置
 
-`.mcp.json`（项目级）：
+`.mcp.json`（项目级；git 方式，无需 PyPI）：
 
 ```json
 {
   "mcpServers": {
     "jikeyan": {
       "command": "uvx",
-      "args": ["jikeyan-mcp"],
+      "args": [
+        "--from",
+        "git+https://github.com/871922384/jikeyan-agent-skill#subdirectory=mcp",
+        "jikeyan-mcp"
+      ],
       "env": {
         "JIKEYAN_AGENT_KEY": "${JIKEYAN_AGENT_KEY}",
         "JIKEYAN_API_BASE_URL": "https://api.jikeyan.cn"
       }
+    }
+  }
+}
+```
+
+Docker 方式（无需 Python，按版本 pin 镜像 tag；`latest` 也可）：
+
+```json
+{
+  "mcpServers": {
+    "jikeyan": {
+      "command": "docker",
+      "args": [
+        "run",
+        "-i",
+        "--rm",
+        "-e",
+        "JIKEYAN_AGENT_KEY",
+        "-e",
+        "JIKEYAN_API_BASE_URL=https://api.jikeyan.cn",
+        "ghcr.io/871922384/jikeyan-mcp:latest"
+      ]
     }
   }
 }
@@ -87,25 +118,39 @@ Key 在 App 内生成：App 中 **设置 → 连接智能体** 生成 Agent Key�
 claude mcp add jikeyan \
   -e JIKEYAN_AGENT_KEY="$JIKEYAN_AGENT_KEY" \
   -e JIKEYAN_API_BASE_URL=https://api.jikeyan.cn \
-  -- uvx jikeyan-mcp
+  -- uvx --from "git+https://github.com/871922384/jikeyan-agent-skill#subdirectory=mcp" jikeyan-mcp
 ```
 
 ## Codex 配置
+
+git 方式：
 
 ```bash
 codex mcp add jikeyan \
   --env JIKEYAN_AGENT_KEY="$JIKEYAN_AGENT_KEY" \
   --env JIKEYAN_API_BASE_URL=https://api.jikeyan.cn \
-  -- uvx jikeyan-mcp
+  -- uvx --from "git+https://github.com/871922384/jikeyan-agent-skill#subdirectory=mcp" jikeyan-mcp
+```
+
+Docker 方式：
+
+```bash
+codex mcp add jikeyan \
+  -- docker run -i --rm -e JIKEYAN_AGENT_KEY -e JIKEYAN_API_BASE_URL=https://api.jikeyan.cn ghcr.io/871922384/jikeyan-mcp:latest
 ```
 
 `codex mcp list` 可以确认注册成功。
 
 ## 其他 MCP 客户端
 
-任何支持 stdio MCP 服务的客户端均可使用，启动命令为 `uvx jikeyan-mcp`
-（PyPI 发布前用上面的 git 方式），环境变量按上表配置。
-Cursor、Windsurf、Gemini CLI 等按各自文档添加 stdio 服务即可。
+任何支持 stdio MCP 服务的客户端均可使用，启动命令二选一（git 方式需
+Python 3.11+，Docker 方式无需本地 Python）：
+
+- `uvx --from "git+https://github.com/871922384/jikeyan-agent-skill#subdirectory=mcp" jikeyan-mcp`
+- `docker run -i --rm -e JIKEYAN_AGENT_KEY ghcr.io/871922384/jikeyan-mcp:latest`
+
+环境变量按上表配置。Cursor、Windsurf、Gemini CLI 等按各自文档添加
+stdio 服务即可。
 
 ## 工具
 

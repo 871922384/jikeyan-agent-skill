@@ -25,7 +25,14 @@ assert marketplace["plugins"][0]["name"] == plugin["name"], (
 assert "jikeyan" in mcp_json["mcpServers"], ".mcp.json server missing"
 assert len(server["description"]) <= 100, "registry description > 100 chars"
 pkg = server["packages"][0]
-assert pkg["registryType"] == "pypi" and pkg["identifier"] == "jikeyan-mcp"
+assert pkg["registryType"] == "oci", pkg
+assert pkg["identifier"].startswith("ghcr.io/871922384/jikeyan-mcp:"), pkg
+oci_tag = pkg["identifier"].rsplit(":", 1)[1]
+assert pkg.get("version") == oci_tag, "package version != OCI tag"
+assert pkg["transport"] == {"type": "stdio"}, pkg
+pyproject = (root / "mcp/pyproject.toml").read_text()
+assert f'version = "{oci_tag}"' in pyproject, "pyproject version mismatch"
+assert server["version"] == oci_tag, "server.json version != OCI tag"
 assert "mcp-name: io.github.871922384/jikeyan-agent-skill" in (
     root / "mcp/README.md"
 ).read_text(), "mcp-name token missing"

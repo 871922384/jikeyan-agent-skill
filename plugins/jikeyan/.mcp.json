@@ -2,7 +2,11 @@
   "mcpServers": {
     "jikeyan": {
       "command": "uvx",
-      "args": ["jikeyan-mcp"]
+      "args": [
+        "--from",
+        "git+https://github.com/871922384/jikeyan-agent-skill#subdirectory=mcp",
+        "jikeyan-mcp"
+      ]
     }
   }
 }

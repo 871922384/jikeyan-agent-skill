@@ -109,7 +109,8 @@ export JIKEYAN_AGENT_KEY='<你的 agent key>'
 ### 国内可访问性：镜像与代理说明
 
 - `api.jikeyan.cn` 服务器在国内，**调接口无需代理、无需镜像**。
-- 慢的是 PyPI（`uvx` 拉包）与 GitHub（拉仓库）。国内这样写：
+- 慢的是 PyPI（`uvx` 拉包）与 GitHub（拉仓库）。PyPI 发布前不走 PyPI，
+  用 git 方式或 GHCR 镜像（见下方 MCP 配置片段）。PyPI 发布后国内这样写：
 
 ```bash
 # uv / pip 走清华或阿里云镜像（二选一）
@@ -127,18 +128,44 @@ cp -r jikeyan-agent-skill/plugins/jikeyan/skills/* ~/.claude/skills/
 
 ### MCP 配置片段
 
-Claude Code `.mcp.json`（项目级；若含 key 请不要提交）：
+Claude Code `.mcp.json`（项目级；若含 key 请不要提交；无需 PyPI）：
 
 ```json
 {
   "mcpServers": {
     "jikeyan": {
       "command": "uvx",
-      "args": ["jikeyan-mcp"],
+      "args": [
+        "--from",
+        "git+https://github.com/871922384/jikeyan-agent-skill#subdirectory=mcp",
+        "jikeyan-mcp"
+      ],
       "env": {
         "JIKEYAN_AGENT_KEY": "${JIKEYAN_AGENT_KEY}",
         "JIKEYAN_API_BASE_URL": "https://api.jikeyan.cn"
       }
+    }
+  }
+}
+```
+
+Docker 备选（无需本地 Python，tag 见 `server.json`，`latest` 也可）：
+
+```json
+{
+  "mcpServers": {
+    "jikeyan": {
+      "command": "docker",
+      "args": [
+        "run",
+        "-i",
+        "--rm",
+        "-e",
+        "JIKEYAN_AGENT_KEY",
+        "-e",
+        "JIKEYAN_API_BASE_URL=https://api.jikeyan.cn",
+        "ghcr.io/871922384/jikeyan-mcp:latest"
+      ]
     }
   }
 }
@@ -150,15 +177,25 @@ Codex：
 codex mcp add jikeyan \
   --env JIKEYAN_AGENT_KEY="$JIKEYAN_AGENT_KEY" \
   --env JIKEYAN_API_BASE_URL=https://api.jikeyan.cn \
-  -- uvx jikeyan-mcp
+  -- uvx --from "git+https://github.com/871922384/jikeyan-agent-skill#subdirectory=mcp" jikeyan-mcp
+```
+
+Docker 备选：
+
+```bash
+codex mcp add jikeyan \
+  -- docker run -i --rm -e JIKEYAN_AGENT_KEY -e JIKEYAN_API_BASE_URL=https://api.jikeyan.cn ghcr.io/871922384/jikeyan-mcp:latest
 ```
 
 其他客户端（Cursor、Windsurf、Gemini CLI……）：添加 stdio 服务，
-命令 `uvx`、参数 `["jikeyan-mcp"]`，环境变量按上表配置。
-`uvx jikeyan-mcp` 需要 `jikeyan-mcp` 已发布到 PyPI；发布前可用：
+二选一（git 方式需 Python 3.11+，Docker 方式无需本地 Python）：
 
 ```bash
-uvx --from "jikeyan-mcp @ git+https://github.com/871922384/jikeyan-agent-skill#subdirectory=mcp" jikeyan-mcp
+uvx --from "git+https://github.com/871922384/jikeyan-agent-skill#subdirectory=mcp" jikeyan-mcp
+```
+
+```bash
+docker run -i --rm -e JIKEYAN_AGENT_KEY ghcr.io/871922384/jikeyan-mcp:latest
 ```
 
 不用 MCP 也行：`plugins/jikeyan/skills/jikeyan-agent/scripts/jikeyan.sh`
@@ -169,6 +206,19 @@ uvx --from "jikeyan-mcp @ git+https://github.com/871922384/jikeyan-agent-skill#s
 > 以下结论均 2026-11-18 联网查官方文档核实，出处附链接；查不到的如实标“未核实”，请勿当作承诺。
 > 能跑本机 stdio 的平台直接照抄；**只支持远程 MCP 的平台**（扣子、Kimi/智谱托管智能体、百炼 Flow）
 > 需要先有一个公网 MCP 端点，现状与托管选项见 [docs/distribution.md](docs/distribution.md)（本仓库不部署任何服务）。
+>
+> ⚠️ PyPI 发布前注意：以下各节凡写 `"args": ["jikeyan-mcp"]`（或 `uvx jikeyan-mcp`）的，
+> 请把 `args` 换成下面二选一（git 方式需 Python 3.11+；Docker 方式无需本地 Python，
+> `latest` 可换成 `server.json` 里 pin 的版本 tag）：
+>
+> ```json
+> "args": ["--from", "git+https://github.com/871922384/jikeyan-agent-skill#subdirectory=mcp", "jikeyan-mcp"]
+> ```
+>
+> ```json
+> "command": "docker",
+> "args": ["run", "-i", "--rm", "-e", "JIKEYAN_AGENT_KEY", "ghcr.io/871922384/jikeyan-mcp:latest"]
+> ```
 
 <details>
 <summary><strong>腾讯 CodeBuddy（IDE + CLI）✅ Skill + MCP（stdio/远程）</strong></summary>
@@ -444,7 +494,7 @@ Skill 走开放平台 API 上传（含顶层 `SKILL.md` 的目录/zip 包），�
 
 腾讯云 MCP 广场的 MCP 均为官方/合作服务，官方明确“针对第三方 MCP 产品，目前暂不提供上架与更新服务”，
 所以 jikeyan 无法上架到该广场。但广场文档里的本地（Local）消费形态就是 stdio，
-你仍可在任何支持 stdio 的客户端里用 `uvx jikeyan-mcp`（配置同 CodeBuddy 一节）。
+你仍可在任何支持 stdio 的客户端里用 git 方式或 GHCR 镜像（配置同 CodeBuddy 一节，`args` 替换见本节开头说明）。
 
 出处：<https://cloud.tencent.com/developer/mcp>、
 <https://cloud.tencent.com/document/product/1212/123193>（访问日期 2026-11-18）。
