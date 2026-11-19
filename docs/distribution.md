@@ -34,27 +34,56 @@
 
 顺序建议：先 **PyPI**（它是 MCP Registry 与 `uvx` 的前置），再各目录。
 
-### 3.1 PyPI：`jikeyan-mcp`（前置）
+### 3.1 PyPI：`jikeyan-mcp`（前置，全自动）
 
-1. 在 https://pypi.org 注册账号并开启 2FA。
-2. 本地打 tag 后构建发布（需先 `pip install build twine`）：
-   ```bash
-   git checkout main && git pull
-   cd mcp && python -m build && twine upload dist/jikeyan-mcp-0.2.0*
-   ```
-3. 验证：`uvx jikeyan-mcp --help` 在一台干净机器上能跑（会提示缺 key 并退出码 1，属于正常）。
-4. 注意：包 README（即 PyPI 描述页）首部已有 `<!-- mcp-name: io.github.871922384/jikeyan-agent-skill -->`，
-   这是 MCP Registry PyPI 所有权验证的依据，**不要删**。
+发版全自动：`.github/workflows/release.yml` 在 push `v*` tag（或手动
+workflow_dispatch）时依次发布 PyPI → 官方 MCP Registry，**不需要任何长期密钥**
+（PyPI 用 Trusted Publishing 的 OIDC，Registry 用 `github-oidc` 登录）。
 
-### 3.2 官方 MCP Registry
+维护者**一次性**操作（只需做一次）：
 
-- 指南：https://modelcontextprotocol.io/registry/quickstart
-- 步骤：`npm install -g mcp-publisher`（或按官方最新方式安装）→ `mcp-publisher login github` →
+1. 在 https://pypi.org 登录 → Account settings → Publishing → Add a new pending
+   publisher，填写：
+   - PyPI Project Name：`jikeyan-mcp`
+   - Owner：`871922384`
+   - Repository：`jikeyan-agent-skill`
+   - Workflow：`release.yml`
+   - Environment：`pypi`
+2. GitHub 仓库 → Settings → Environments → New environment，新建名为 `pypi`
+   的 environment（名称须与 workflow 中的 `environment: pypi` 一致，
+   Trusted Publishing 靠它做 audience/权限绑定）。
+
+之后每次发版只需（tag 版本须与 `mcp/pyproject.toml`、`server.json` 的
+`version` 及 `packages[0].version` 三处一致，否则 CI 直接失败）：
+
+```bash
+git checkout main && git pull
+# 先把三处版本号改成新版本并提交，然后：
+git tag v0.2.1 && git push origin v0.2.1
+```
+
+验证：`uvx jikeyan-mcp --help` 在一台干净机器上能跑（会提示缺 key 并退出码 1，属于正常）。
+注意：包 README（即 PyPI 描述页）首部已有 `<!-- mcp-name: io.github.871922384/jikeyan-agent-skill -->`，
+这是 MCP Registry PyPI 所有权验证的依据，**不要删**。
+
+备选（CI 挂掉时才用）：本地 `cd mcp && uv build && twine upload dist/*`
+（需先在 PyPI 配好 API token）。
+
+### 3.2 官方 MCP Registry（全自动，无需手动）
+
+- 指南：https://modelcontextprotocol.io/registry/quickstart（发布流程）
+  与 https://modelcontextprotocol.io/registry/github-actions（GitHub Actions 自动发布）。
+- 同一个 `release.yml` 的 `mcp-registry` job（`needs: pypi`）会自动做：
+  轮询 PyPI JSON API 等待新版本可见（最多 ~5 分钟）→ 按官方文档方式下载并
+  Sigstore 验签 `mcp-publisher`（版本 pin 在 workflow 的 `MCP_PUBLISHER_VERSION`）
+  → `mcp-publisher login github-oidc`（OIDC，无长期 token）→
   在仓库根目录 `mcp-publisher publish`（读取本仓库 `server.json`）→
-  用 `curl "https://registry.modelcontextprotocol.io/v0.1/servers?search=io.github.871922384/jikeyan-agent-skill"` 验证。
-- 前置：PyPI 包已发布且版本号与 `server.json` 的 `version` 一致（当前 `0.2.0`）；
-  `name` 命名空间 `io.github.871922384` 需用同名 GitHub 账号登录验证。
+  `curl` registry 搜索接口验证。
+- 前置：PyPI 包已发布且版本号与 `server.json` 的 `version` 一致；
+  `name` 命名空间 `io.github.871922384` 由同名 GitHub 账号的 OIDC 身份验证。
 - Registry 目前为 preview，提示 breaking change / 数据重置属正常。
+- 备选（CI 挂掉时才用）：本地装 `mcp-publisher` 后 `mcp-publisher login github`
+  再 `mcp-publisher publish`。
 
 ### 3.3 Smithery
 
@@ -150,10 +179,13 @@ MIT LICENSE、PyPI 包 `jikeyan-mcp 0.2.0`（它是魔搭/百炼托管的前置�
 
 ## 8. 发版顺序 checklist（给 Rex）
 
-1. 合并 `feat/packaging` 到 `main`。
-2. 在 GitHub 网页设置 description / homepage / topics（见 §2）+ 上传社交预览图（见 §5）。
-3. 发 PyPI `jikeyan-mcp 0.2.0`（§3.1），验证 `uvx jikeyan-mcp`。
-4. 发官方 MCP Registry（§3.2）。
-5. Smithery（§3.3）、Glama（§3.4）、mcpservers.org（§3.5）。
-6. awesome PR 若干（§3.6）。
-7. 国内：PyPI 发包后视情况备料魔搭 MCP 广场（§7）；远程 MCP 托管方案（§6）按需决策。
+1. 合并本分支到 `main`。
+2. 一次性操作：PyPI 上加 pending publisher + GitHub 上建 `pypi` environment（见 §3.1）。
+3. 在 GitHub 网页上设置 description / homepage / topics（见 §2）+ 上传社交预览图（见 §5）。
+4. 改三处版本号（`mcp/pyproject.toml`、`server.json` 的 `version` 与
+   `packages[0].version`，三者必须一致）→ 提交 → `git tag vX.Y.Z && git push origin vX.Y.Z`，
+   CI 自动发 PyPI（§3.1）+ 官方 MCP Registry（§3.2）；失败时看 Actions 日志，备选手动步骤见 §3.1/§3.2 末尾一行。
+5. 发完验证 `uvx jikeyan-mcp --help`。
+6. Smithery（§3.3）、Glama（§3.4）、mcpservers.org（§3.5）。
+7. awesome PR 若干（§3.6）。
+8. 国内：PyPI 发包后视情况备料魔搭 MCP 广场（§7）；远程 MCP 托管方案（§6）按需决策。

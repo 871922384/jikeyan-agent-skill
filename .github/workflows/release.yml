@@ -1,0 +1,149 @@
+name: release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+jobs:
+  pypi:
+    name: Publish to PyPI (Trusted Publishing)
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Set up uv
+        # setup-uv publishes only full-version tags since v8 (no major tags);
+        # pin the full version tag. SHA: 68559e99cc807c1eb7e9238fd43a15bba460eec2
+        uses: astral-sh/setup-uv@v10.3.3
+        with:
+          python-version: "3.12"
+
+      - name: Check tag matches package versions
+        run: |
+          set -euo pipefail
+          if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
+            TAG_VERSION="${GITHUB_REF_NAME#v}"
+          else
+            # workflow_dispatch: derive expected version from the manifests
+            TAG_VERSION="$(python3 -c 'import tomllib; print(tomllib.load(open("mcp/pyproject.toml", "rb"))["project"]["version"]')"
+          fi
+          echo "Tag/manual version: ${TAG_VERSION}"
+          PY_VERSION="$(python3 -c 'import tomllib; print(tomllib.load(open("mcp/pyproject.toml", "rb"))["project"]["version"]')"
+          SRV_VERSION="$(python3 -c 'import json; print(json.load(open("server.json"))["version"]')"
+          PKG_VERSION="$(python3 -c 'import json; print(json.load(open("server.json"))["packages"][0]["version"]')"
+          echo "pyproject=${PY_VERSION} server.json=${SRV_VERSION} package[0]=${PKG_VERSION}"
+          if [[ "${PY_VERSION}" != "${TAG_VERSION}" ]]; then
+            echo "ERROR: mcp/pyproject.toml version (${PY_VERSION}) != tag version (${TAG_VERSION})" >&2
+            exit 1
+          fi
+          if [[ "${SRV_VERSION}" != "${TAG_VERSION}" ]]; then
+            echo "ERROR: server.json version (${SRV_VERSION}) != tag version (${TAG_VERSION})" >&2
+            exit 1
+          fi
+          if [[ "${PKG_VERSION}" != "${TAG_VERSION}" ]]; then
+            echo "ERROR: server.json packages[0].version (${PKG_VERSION}) != tag version (${TAG_VERSION})" >&2
+            exit 1
+          fi
+          echo "VERSION=${TAG_VERSION}" >> "${GITHUB_ENV}"
+          echo "All versions match: ${TAG_VERSION}"
+
+      - name: Build sdist and wheel
+        run: |
+          set -euo pipefail
+          cd mcp
+          uv build
+
+      - name: Run MCP tests
+        run: |
+          set -euo pipefail
+          cd mcp
+          uv run --extra test pytest
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: mcp/dist/
+          print-hash: true
+
+  mcp-registry:
+    name: Publish to MCP Registry
+    runs-on: ubuntu-latest
+    needs: pypi
+    permissions:
+      id-token: write
+      contents: read
+    env:
+      MCP_PUBLISHER_VERSION: v1.8.1
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Wait for PyPI release to be available
+        run: |
+          set -euo pipefail
+          if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
+            VERSION="${GITHUB_REF_NAME#v}"
+          else
+            VERSION="$(python3 -c 'import tomllib; print(tomllib.load(open("mcp/pyproject.toml", "rb"))["project"]["version"]')"
+          fi
+          echo "Waiting for jikeyan-mcp==${VERSION} on PyPI..."
+          for i in $(seq 1 30); do
+            if curl --fail --silent --show-error "https://pypi.org/pypi/jikeyan-mcp/${VERSION}/json" > /dev/null; then
+              echo "Found jikeyan-mcp==${VERSION} on PyPI (attempt ${i})."
+              exit 0
+            fi
+            echo "Attempt ${i}/30: not yet on PyPI, sleeping 10s..."
+            sleep 10
+          done
+          echo "ERROR: jikeyan-mcp==${VERSION} did not appear on PyPI within ~5 minutes." >&2
+          exit 1
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@v4.1.2
+
+      - name: Download and verify mcp-publisher
+        run: |
+          set -euo pipefail
+          os="$(uname -s | tr '[:upper:]' '[:lower:]')"
+          arch="$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/')"
+          archive="mcp-publisher_${os}_${arch}.tar.gz"
+          base_url="https://github.com/modelcontextprotocol/registry/releases/download/${MCP_PUBLISHER_VERSION}"
+          curl --fail --location --silent --show-error --output "${archive}" "${base_url}/${archive}"
+          curl --fail --location --silent --show-error --output "${archive}.sigstore.json" "${base_url}/${archive}.sigstore.json"
+          cosign verify-blob \
+            --bundle "${archive}.sigstore.json" \
+            --certificate-identity "https://github.com/modelcontextprotocol/registry/.github/workflows/release.yml@refs/tags/${MCP_PUBLISHER_VERSION}" \
+            --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
+            "${archive}"
+          tar xzf "${archive}" mcp-publisher
+          rm -f "${archive}" "${archive}.sigstore.json"
+          ./mcp-publisher --help
+
+      - name: Authenticate to MCP Registry
+        run: |
+          set -euo pipefail
+          ./mcp-publisher login github-oidc
+
+      - name: Publish server to MCP Registry
+        run: |
+          set -euo pipefail
+          ./mcp-publisher publish
+
+      - name: Verify registry listing
+        run: |
+          set -euo pipefail
+          resp="$(curl --fail --silent --show-error "https://registry.modelcontextprotocol.io/v0.1/servers?search=io.github.871922384%2Fjikeyan-agent-skill")"
+          echo "${resp}" | head -c 2000
+          echo ""
+          if ! echo "${resp}" | grep -q "io.github.871922384/jikeyan-agent-skill"; then
+            echo "ERROR: server not found in registry search results." >&2
+            exit 1
+          fi
+          echo "Registry verification passed."
