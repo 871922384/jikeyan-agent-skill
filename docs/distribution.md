@@ -107,9 +107,7 @@ App Icon + 中英文 tagline，用 PIL 生成，见下方生成命令备查）�
 重新生成（品牌色/文案改了才需要）：
 
 ```bash
-python3 - <<'EOF'
-# 见 feat/packaging 分支提交历史：PIL 渐变 + PingFang SC(Index 3) + assets/logo.png
-EOF
+python3 scripts/social_preview.py
 ```
 
 生成脚本以本次提交的 `assets/social-preview.png` 为准，字体用系统 PingFang SC，
