@@ -132,7 +132,7 @@ jobs:
             TOKEN="$(curl --fail --silent --show-error "https://ghcr.io/token?service=ghcr.io&scope=repository:871922384/jikeyan-mcp:pull" | python3 -c 'import json,sys; print(json.load(sys.stdin)["token"])')"
             if curl --fail --silent --show-error \
               -H "Authorization: Bearer ${TOKEN}" \
-              -H "Accept: application/vnd/oci.image.index.v1+json" \
+              -H "Accept: application/vnd.oci.image.index.v1+json, application/vnd.docker.distribution.manifest.list.v2+json, application/vnd.oci.image.manifest.v1+json, application/vnd.docker.distribution.manifest.v2+json" \
               "https://ghcr.io/v2/871922384/jikeyan-mcp/manifests/${VERSION}" > /dev/null; then
               echo "Found ghcr.io/871922384/jikeyan-mcp:${VERSION} (attempt ${i})."
               exit 0
