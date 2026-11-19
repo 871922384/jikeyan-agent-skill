@@ -26,33 +26,11 @@ jobs:
             TAG_VERSION="${GITHUB_REF_NAME#v}"
           else
             # workflow_dispatch: derive expected version from the manifests
-            TAG_VERSION="$(python3 -c 'import tomllib; print(tomllib.load(open("mcp/pyproject.toml", "rb"))["project"]["version"]')"
+            TAG_VERSION="$(python3 scripts/release_versions.py --print pyproject)"
           fi
           echo "Tag/manual version: ${TAG_VERSION}"
-          PY_VERSION="$(python3 -c 'import tomllib; print(tomllib.load(open("mcp/pyproject.toml", "rb"))["project"]["version"]')"
-          SRV_VERSION="$(python3 -c 'import json; print(json.load(open("server.json"))["version"]')"
-          PKG_VERSION="$(python3 -c 'import json; print(json.load(open("server.json"))["packages"][0]["version"]')"
-          IDENTIFIER="$(python3 -c 'import json; print(json.load(open("server.json"))["packages"][0]["identifier"]')"
-          OCI_TAG="${IDENTIFIER##*:}"
-          echo "pyproject=${PY_VERSION} server.json=${SRV_VERSION} package=${PKG_VERSION} oci_tag=${OCI_TAG}"
-          if [[ "${PY_VERSION}" != "${TAG_VERSION}" ]]; then
-            echo "ERROR: mcp/pyproject.toml version (${PY_VERSION}) != tag version (${TAG_VERSION})" >&2
-            exit 1
-          fi
-          if [[ "${SRV_VERSION}" != "${TAG_VERSION}" ]]; then
-            echo "ERROR: server.json version (${SRV_VERSION}) != tag version (${TAG_VERSION})" >&2
-            exit 1
-          fi
-          if [[ "${PKG_VERSION}" != "${TAG_VERSION}" ]]; then
-            echo "ERROR: server.json packages[0].version (${PKG_VERSION}) != tag version (${TAG_VERSION})" >&2
-            exit 1
-          fi
-          if [[ "${OCI_TAG}" != "${TAG_VERSION}" ]]; then
-            echo "ERROR: server.json packages[0].identifier tag (${OCI_TAG}) != tag version (${TAG_VERSION})" >&2
-            exit 1
-          fi
+          python3 scripts/release_versions.py --check "${TAG_VERSION}"
           echo "VERSION=${TAG_VERSION}" >> "${GITHUB_ENV}"
-          echo "All versions match: ${TAG_VERSION}"
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v4.4.0
@@ -104,22 +82,11 @@ jobs:
             TAG_VERSION="${GITHUB_REF_NAME#v}"
           else
             # workflow_dispatch: derive expected version from the manifests
-            TAG_VERSION="$(python3 -c 'import tomllib; print(tomllib.load(open("mcp/pyproject.toml", "rb"))["project"]["version"]')"
+            TAG_VERSION="$(python3 scripts/release_versions.py --print pyproject)"
           fi
           echo "Tag/manual version: ${TAG_VERSION}"
-          PY_VERSION="$(python3 -c 'import tomllib; print(tomllib.load(open("mcp/pyproject.toml", "rb"))["project"]["version"]')"
-          SRV_VERSION="$(python3 -c 'import json; print(json.load(open("server.json"))["version"]')"
-          echo "pyproject=${PY_VERSION} server.json=${SRV_VERSION} (PyPI check only; OCI tag is verified by the ghcr job)"
-          if [[ "${PY_VERSION}" != "${TAG_VERSION}" ]]; then
-            echo "ERROR: mcp/pyproject.toml version (${PY_VERSION}) != tag version (${TAG_VERSION})" >&2
-            exit 1
-          fi
-          if [[ "${SRV_VERSION}" != "${TAG_VERSION}" ]]; then
-            echo "ERROR: server.json version (${SRV_VERSION}) != tag version (${TAG_VERSION})" >&2
-            exit 1
-          fi
+          python3 scripts/release_versions.py --check "${TAG_VERSION}"
           echo "VERSION=${TAG_VERSION}" >> "${GITHUB_ENV}"
-          echo "All versions match: ${TAG_VERSION}"
 
       - name: Build sdist and wheel
         run: |
@@ -158,11 +125,11 @@ jobs:
           if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
             VERSION="${GITHUB_REF_NAME#v}"
           else
-            VERSION="$(python3 -c 'import tomllib; print(tomllib.load(open("mcp/pyproject.toml", "rb"))["project"]["version"]')"
+            VERSION="$(python3 scripts/release_versions.py --print pyproject)"
           fi
           echo "Waiting for ghcr.io/871922384/jikeyan-mcp:${VERSION}..."
           for i in $(seq 1 30); do
-            TOKEN="$(curl --fail --silent --show-error "https://ghcr.io/token?service=ghcr.io&scope=repository:871922384/jikeyan-mcp:pull" | python3 -c 'import json,sys; print(json.load(sys.stdin)["token"]')"
+            TOKEN="$(curl --fail --silent --show-error "https://ghcr.io/token?service=ghcr.io&scope=repository:871922384/jikeyan-mcp:pull" | python3 -c 'import json,sys; print(json.load(sys.stdin)["token"])')"
             if curl --fail --silent --show-error \
               -H "Authorization: Bearer ${TOKEN}" \
               -H "Accept: application/vnd/oci.image.index.v1+json" \

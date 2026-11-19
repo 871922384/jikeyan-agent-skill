@@ -15,6 +15,16 @@ jobs:
       - name: Validate SKILL.md frontmatter and manifest JSON
         run: python scripts/check_manifests.py
 
+  release-versions:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Check release versions are consistent
+        run: python scripts/release_versions.py --check "$(python scripts/release_versions.py --print pyproject)"
+
   shellcheck:
     runs-on: ubuntu-latest
     steps:
