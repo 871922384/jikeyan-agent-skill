@@ -1,0 +1,38 @@
+# jikeyan-agent-skill
+
+> Official agent skills + MCP server for 极科研 (jikeyan), a local-first iOS
+> kanban app for research project tracking. Lets an AI agent manage research
+> projects, deadlines, waiting items, submissions, and review rounds via a
+> documented Agent API. Keys stay in the user's environment; patient data is
+> never accepted by the API.
+>
+> 中文摘要：极科研官方智能体 Skill + MCP 服务。让 AI 智能体（Claude Code、
+> Codex、Qwen、Trae、CodeBuddy、通义灵码等）帮你做科研项目管理：项目进度、
+> 投稿、审稿回复、等待项跟进。服务端在国内、无需代理；支持本机 stdio 与
+> Skill 文件安装；云端 Agent（扣子、百炼、Kimi、智谱）需远程 MCP 端点。
+> 密钥只放环境变量，不进仓库；患者隐私数据接口直接拒收。
+
+## Docs
+
+- [README](https://github.com/871922384/jikeyan-agent-skill/blob/main/README.md): value proposition, 3-step setup, client install snippets
+- [中文说明](https://github.com/871922384/jikeyan-agent-skill/blob/main/README.zh-CN.md): Chinese version of the README
+- [Agent API online guide](https://api.jikeyan.cn/agent.md): auth, endpoints, errors, compliance (authoritative)
+- [MCP package](https://github.com/871922384/jikeyan-agent-skill/blob/main/mcp/README.md): install, config, 17 tools, privacy
+- [Distribution notes](https://github.com/871922384/jikeyan-agent-skill/blob/main/docs/distribution.md): registry formats and manual submission checklist
+
+## Skills
+
+- [jikeyan-agent SKILL.md](https://github.com/871922384/jikeyan-agent-skill/blob/main/plugins/jikeyan/skills/jikeyan-agent/SKILL.md): Agent API cookbook (schema-first, versioned writes, dry_run)
+- [jikeyan-agent endpoints](https://github.com/871922384/jikeyan-agent-skill/blob/main/plugins/jikeyan/skills/jikeyan-agent/references/endpoints.md): endpoint table for the agent key scope
+- [jikeyan-agent shell helper](https://github.com/871922384/jikeyan-agent-skill/blob/main/plugins/jikeyan/skills/jikeyan-agent/scripts/jikeyan.sh): curl wrapper using `JIKEYAN_AGENT_KEY`
+- [jikeyan-academic-colleague SKILL.md](https://github.com/871922384/jikeyan-agent-skill/blob/main/plugins/jikeyan/skills/jikeyan-academic-colleague/SKILL.md): daily/weekly review, stalled detection, waiting-item follow-up, review response, pre-submission checks
+
+## Product
+
+- [极科研](https://jikeyan.cn): local-first research project board
+- [App Store](https://apps.apple.com/app/id6785017540): iOS download
+- [Privacy](https://jikeyan.cn/privacy): what is (and isn't) collected
+
+## Optional
+
+- [CHANGELOG](https://github.com/871922384/jikeyan-agent-skill/blob/main/CHANGELOG.md): release history

@@ -7,8 +7,10 @@
 #   jikeyan.sh patch <path> [json-body]
 #
 # Env:
-#   JIKEYAN_API_KEY        (required) agent key, sent as a Bearer token.
-#   JIKEYAN_API_BASE       (optional) default https://api.jikeyan.cn
+#   JIKEYAN_AGENT_KEY       (required) agent key, sent as a Bearer token.
+#                         The old name JIKEYAN_API_KEY is still accepted as a
+#                         fallback but is deprecated and will be removed.
+#   JIKEYAN_API_BASE        (optional) default https://api.jikeyan.cn
 #   JIKEYAN_IDEMPOTENCY_KEY (optional) sent as Idempotency-Key on post/patch.
 #
 # Examples:
@@ -24,8 +26,13 @@ fail() {
 
 command -v curl >/dev/null 2>&1 || fail "curl is required but not installed."
 
-if [ -z "${JIKEYAN_API_KEY:-}" ]; then
-  fail "JIKEYAN_API_KEY is not set. Export your agent key first; never hard-code it."
+if [ -n "${JIKEYAN_AGENT_KEY:-}" ]; then
+  AGENT_KEY="${JIKEYAN_AGENT_KEY}"
+elif [ -n "${JIKEYAN_API_KEY:-}" ]; then
+  printf 'jikeyan.sh: warning: JIKEYAN_API_KEY is deprecated, use JIKEYAN_AGENT_KEY instead.\n' >&2
+  AGENT_KEY="${JIKEYAN_API_KEY}"
+else
+  fail "JIKEYAN_AGENT_KEY is not set. Export your agent key first; never hard-code it."
 fi
 
 BASE="${JIKEYAN_API_BASE:-https://api.jikeyan.cn}"
@@ -44,7 +51,7 @@ fi
 
 UPPER=$(printf '%s' "$METHOD" | tr '[:lower:]' '[:upper:]')
 
-ARGS=(-sS -H "Authorization: Bearer ${JIKEYAN_API_KEY}")
+ARGS=(-sS -H "Authorization: Bearer ${AGENT_KEY}")
 if [ "$UPPER" != "GET" ]; then
   ARGS+=(-H "Content-Type: application/json")
   if [ -n "${JIKEYAN_IDEMPOTENCY_KEY:-}" ]; then

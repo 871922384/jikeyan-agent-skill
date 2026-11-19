@@ -1,0 +1,36 @@
+# Smithery deployment config for the jikeyan MCP server.
+# Format: https://smithery.ai/docs (registry) + deployed stdio examples.
+# Requires the `jikeyan-mcp` package on PyPI (see docs/distribution.md).
+startCommand:
+  type: stdio
+  configSchema:
+    type: object
+    properties:
+      jikeyanAgentKey:
+        type: string
+        title: Agent Key
+        description: Agent Key generated in the 极科研 app (Settings → Connect Agent).
+      jikeyanApiBaseUrl:
+        type: string
+        title: API base URL
+        description: Override the API root (default https://api.jikeyan.cn).
+        default: https://api.jikeyan.cn
+      jikeyanContactEmail:
+        type: string
+        title: Contact email
+        description: Your email for Crossref / NCBI / ClinicalTrials.gov lookups (verify_references, check_topic_collision).
+      ncbiApiKey:
+        type: string
+        title: NCBI API key
+        description: Optional PubMed API key (higher rate limits).
+  commandFunction: |-
+    (config) => ({
+      command: 'uvx',
+      args: ['jikeyan-mcp'],
+      env: {
+        ...(config.jikeyanAgentKey && { JIKEYAN_AGENT_KEY: config.jikeyanAgentKey }),
+        ...(config.jikeyanApiBaseUrl && { JIKEYAN_API_BASE_URL: config.jikeyanApiBaseUrl }),
+        ...(config.jikeyanContactEmail && { JIKEYAN_CONTACT_EMAIL: config.jikeyanContactEmail }),
+        ...(config.ncbiApiKey && { NCBI_API_KEY: config.ncbiApiKey }),
+      },
+    })

@@ -1,0 +1,19 @@
+{
+  "name": "jikeyan",
+  "version": "0.2.1",
+  "description": "Official 极科研 (jikeyan) skills: manage research projects, waiting items, submissions and review rounds from your AI agent",
+  "author": {
+    "name": "jikeyan",
+    "url": "https://jikeyan.cn"
+  },
+  "homepage": "https://jikeyan.cn",
+  "repository": "https://github.com/871922384/jikeyan-agent-skill",
+  "license": "MIT",
+  "keywords": [
+    "research-management",
+    "agent-skills",
+    "mcp",
+    "academic",
+    "kanban"
+  ]
+}
