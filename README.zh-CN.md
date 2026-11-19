@@ -5,7 +5,7 @@
 <h1 align="center">极科研智能体技能 jikeyan-agent-skill</h1>
 
 <p align="center">
-  让 AI 智能体帮你做科研项目管理：课题进度、投稿、审稿回复、等待项跟进，一句话直达。
+  让 AI 智能体帮你做科研项目管理：项目进度、投稿、审稿回复、等待项跟进，一句话直达。
   <br />
   Give your AI agent a research dashboard: projects, deadlines, waiting items, submissions, reviews.
   <br />
@@ -24,7 +24,7 @@
 
 > **[极科研 (jikeyan)](https://jikeyan.cn) 官方智能体 Skill + MCP 服务**：本地优先的 iOS 科研看板 App，
 > 搭配两个可安装 skill 与一个独立 MCP 服务，让你的智能体（Claude Code、Codex、Qwen、Trae、CodeBuddy 等）
-> 管理课题进度、节点、等待项、投稿与审稿。调用同一份公开 Agent API（[在线指南](https://api.jikeyan.cn/agent.md)）。
+> 管理项目进度、节点、等待项、投稿与审稿。调用同一份公开 Agent API（[在线指南](https://api.jikeyan.cn/agent.md)）。
 > 服务端 `api.jikeyan.cn` 本身在国内，**无需代理**；GitHub 访问慢时的替代办法见下方“三步上手”。
 
 ## 它是怎么工作的
@@ -42,9 +42,9 @@ flowchart LR
 ## 产品截图
 
 <p align="center">
-  <img src="assets/screenshots/today.png" width="220" alt="今天页：逾期与临近事项按日期分组" />
+  <img src="assets/screenshots/today.png" width="220" alt="今天页：逾期事项、今日任务与待跟进的等待项" />
   <img src="assets/screenshots/project.png" width="220" alt="项目页：节点、等待项、时间线" />
-  <img src="assets/screenshots/connect-agent.png" width="220" alt="App 内连接智能体引导页" />
+  <img src="assets/screenshots/connect-agent.png" width="220" alt="设置 → 连接智能体：Key 状态、接入步骤与 Key 管理" />
   <br />
   <em>今天页 · 项目页 · 连接智能体——均为内置演示数据截图，不含真实项目与个人信息。</em>
 </p>
@@ -55,7 +55,7 @@ flowchart LR
 |---|---|
 | ☀️ 今天有哪些要紧事 | 逾期节点、7 天内截止、今天该复查的等待项、最近 48 小时进展（`get_today` + 每日复盘工作流） |
 | ⏳ 哪些事项卡住了 | 找出停滞的“等别人”事项，起草中英文跟进话术（只起草、不代发） |
-| 📦 把这些课题导进来 | 用你自己的 `external_ref` 幂等建项目，一次 patch 写完所有节点 |
+| 📦 把这些项目导进来 | 用你自己的 `external_ref` 幂等建项目，一次 patch 写完所有节点 |
 | 📝 审稿意见帮我拆一下 | 把审稿意见拆成编号事项，起草逐条回复信，记录审稿轮次（`add_review_round`） |
 | ✅ 投稿前帮我检查一遍 | 期刊要求、伦理、作者、参考文献、图表、cover letter，逐项核对 |
 | 📅 这个截止倒排一下 | 从硬性截止倒推，预留外部反馈与合作者确认的缓冲 |
@@ -71,7 +71,7 @@ flowchart LR
 > 目前手头有 3 个项目，其中 1 项已经逾期、需要优先处理，
 > 今天还有 2 件在等的事该问一下了。今天我们先从哪一项开始推进？
 > 我可以帮你更新阶段和截止、跟进伦理审批和合作方回复、记录投稿和审稿轮次——比如：
-> ① 把那篇乳腺癌预后课题加进看板（下周五前要交初稿），
+> ① 把那篇乳腺癌预后项目加进看板（下周五前要交初稿），
 > ② 看一下今天有哪几件事在等回复，③ 把刚回来的大修意见记成第二轮审稿。
 >
 > **你：** 先看第 ② 项吧，今天在等哪些回复？

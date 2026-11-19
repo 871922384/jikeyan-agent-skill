@@ -7,7 +7,7 @@
 <p align="center">
   Give your AI agent a research dashboard: projects, deadlines, waiting items, submissions, reviews.
   <br />
-  让 AI 智能体替你管课题、盯截止、跟等待项——科研项目管理，一句话直达。
+  让 AI 智能体替你管项目、盯截止、跟等待项——科研项目管理，一句话直达。
   <br />
   <a href="https://jikeyan.cn">Website</a> ·
   <a href="https://apps.apple.com/app/id6785017540">App Store</a> ·
@@ -43,9 +43,9 @@ follow-ups on your behalf.
 ## Screenshots
 
 <p align="center">
-  <img src="assets/screenshots/today.png" width="220" alt="Today view: overdue and upcoming items grouped by date" />
+  <img src="assets/screenshots/today.png" width="220" alt="Today view: overdue items, today's tasks, and waiting items to chase" />
   <img src="assets/screenshots/project.png" width="220" alt="Project view: nodes, waiting items, timeline" />
-  <img src="assets/screenshots/connect-agent.png" width="220" alt="Connect agent onboarding in the app" />
+  <img src="assets/screenshots/connect-agent.png" width="220" alt="Connect Agent screen in Settings: key status, setup steps, key management" />
   <br />
   <em>Today · Project · Connect agent — all shots use built-in demo data, no real projects.</em>
 </p>
