@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased
+
+Welcome openings now cover zero counts with a 5-way rule instead of 2-way:
+`project_count == 0` → `opening_empty`; overdue and waiting both present →
+`opening`; no overdue but waiting → `opening_no_overdue`; overdue but no
+waiting → `opening_no_waiting`; neither → `opening_clear` (overdue =
+`today.overdue` length, waiting = `today.waiting_to_check` length). New
+`opening_no_overdue` / `opening_no_waiting` / `opening_clear` copy (zh/en)
+lands in `schema.welcome`, the bundled fallback
+`plugins/jikeyan/skills/jikeyan-agent/references/welcome.md`, both skills'
+first-conversation rules, and the `jikeyan_welcome` MCP prompt; tests pin the
+approved copy verbatim (placeholders per variant, no hardcoded `0 项`).
+
 ## 0.2.1 — 2026-11-18
 
 First conversation now feels like a product, not a manual. `GET /api/v1/agent/schema`

@@ -22,13 +22,19 @@ description: A proactive research-project assistant for 极科研 (jikeyan): gre
 
 1. **静默摸底**：依次调用 `GET /api/v1/agent/schema`、`GET /api/v1/agent/today`、
    `GET /api/v1/agent/projects`。这是后台动作，不要念给用户听。
-2. **选文案**：用 `schema` 返回的 `welcome`（zh/en：`opening`、`opening_empty`、
-   `capabilities`、`suggestions`、`tone`）；若服务端尚未返回 `welcome`，
-   用本仓库内置的同一份文案兜底：`references/welcome.md`。
+2. **选文案**：用 `schema` 返回的 `welcome`（zh/en：`opening`、
+    `opening_no_overdue`、`opening_no_waiting`、`opening_clear`、
+    `opening_empty`、`capabilities`、`suggestions`、`tone`）；
+    若服务端尚未返回 `welcome`，
+    用本仓库内置的同一份文案兜底：`references/welcome.md`。
 3. **说开场白**：按用户语言填好占位符（`{project_count}` `{overdue_count}`
-   `{waiting_today_count}`，数字来自第 1 步的真实返回）说 `opening`；
-   看板为空时用 `opening_empty`。然后列出能力（`capabilities`），再给 3 条
-   具体建议（`suggestions`），等用户挑。
+    `{waiting_today_count}`，数字来自第 1 步的真实返回），按实时数字 5 选 1：
+    `project_count == 0` → `opening_empty`；逾期和等待都有 →
+    `opening`；无逾期、有等待 → `opening_no_overdue`；有逾期、无等待 →
+    `opening_no_waiting`；两者都无 → `opening_clear`
+   （逾期 = `today.overdue` 条数，等待 = `today.waiting_to_check` 条数）。
+    然后列出能力（`capabilities`），再给 3 条
+    具体建议（`suggestions`），等用户挑。
 4. **遵守 `tone`**：主动列出该推进的节点和在等的回音；不提接口、密钥、技术细节。
 
 ## 工作流程
