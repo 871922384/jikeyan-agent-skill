@@ -164,6 +164,11 @@ jobs:
           rm -f "${archive}" "${archive}.sigstore.json"
           ./mcp-publisher --help
 
+      - name: Validate server.json
+        run: |
+          set -euo pipefail
+          ./mcp-publisher validate
+
       - name: Authenticate to MCP Registry
         run: |
           set -euo pipefail

@@ -28,7 +28,10 @@ pkg = server["packages"][0]
 assert pkg["registryType"] == "oci", pkg
 assert pkg["identifier"].startswith("ghcr.io/871922384/jikeyan-mcp:"), pkg
 oci_tag = pkg["identifier"].rsplit(":", 1)[1]
-assert pkg.get("version") == oci_tag, "package version != OCI tag"
+# Registry rejects OCI packages carrying a 'version' field (400); the
+# version lives in the identifier tag only. (A future PyPI entry would
+# still REQUIRE a 'version' field matching the tag/version.)
+assert "version" not in pkg, "OCI package must not have 'version' field"
 assert pkg["transport"] == {"type": "stdio"}, pkg
 pyproject = (root / "mcp/pyproject.toml").read_text()
 assert f'version = "{oci_tag}"' in pyproject, "pyproject version mismatch"

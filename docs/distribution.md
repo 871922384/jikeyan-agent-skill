@@ -10,7 +10,7 @@
 | `.claude-plugin/marketplace.json` | Claude Code《Create a marketplace》：顶层 `name` + `owner` + `plugins[]`，entry 需 `name` + `source`（本仓库用相对路径 `./plugins/jikeyan`），entry 名须与 `plugin.json` 的 `name` 一致 | https://code.claude.com/docs/en/plugin-marketplaces.md |
 | `plugins/jikeyan/.claude-plugin/plugin.json` | Claude Code《Plugin manifest reference》：`name` 必填（kebab-case），`version`/`description`/`author` 缺失会报 warning；`mcpServers` 等组件路径须在插件目录内 | https://code.claude.com/docs/en/plugins/manifest-reference.md |
 | `plugins/jikeyan/.mcp.json` | 同上：插件根目录 `.mcp.json` 会自动加载为 MCP 服务定义，`command: uvx` + git 形态 `args`（`--from git+https://…#subdirectory=mcp`，PyPI 不可用期间的写法，见其文件内容） | https://code.claude.com/docs/en/plugins/manifest-reference.md |
-| `server.json` | MCP Registry《server.json Format Specification》+《Official Registry Requirements》+《Package Types》：`$schema` 固定为 `https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json`；`description` ≤ 100 字符（本文件 83）；OCI 包用 `registryType: oci` + `identifier: ghcr.io/871922384/jikeyan-mcp:<version>`（`version` 与 tag 一致）；OCI 所有权验证靠镜像的 `io.modelcontextprotocol.server.name` label/注解（值须等于 `server.json` 的 `name`），见 `mcp/Dockerfile` | https://github.com/modelcontextprotocol/registry/blob/main/docs/reference/server-json/generic-server-json.md · https://github.com/modelcontextprotocol/registry/blob/main/docs/reference/server-json/official-registry-requirements.md · https://github.com/modelcontextprotocol/registry/blob/main/docs/modelcontextprotocol-io/package-types.mdx · 发布流程 https://modelcontextprotocol.io/registry/quickstart |
+| `server.json` | MCP Registry《server.json Format Specification》+《Official Registry Requirements》+《Package Types》：`$schema` 固定为 `https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json`；`description` ≤ 100 字符（本文件 83）；OCI 包用 `registryType: oci` + `identifier: ghcr.io/871922384/jikeyan-mcp:<version>`（OCI 包**不得带** `version` 字段，版本只写 identifier 的 tag——registry 会 400 拒绝；PyPI 包条目则相反，**必须带** `version` 字段，见 §3.1 示例）；OCI 所有权验证靠镜像的 `io.modelcontextprotocol.server.name` label/注解（值须等于 `server.json` 的 `name`），见 `mcp/Dockerfile` | https://github.com/modelcontextprotocol/registry/blob/main/docs/reference/server-json/generic-server-json.md · https://github.com/modelcontextprotocol/registry/blob/main/docs/reference/server-json/official-registry-requirements.md · https://github.com/modelcontextprotocol/registry/blob/main/docs/modelcontextprotocol-io/package-types.mdx · 发布流程 https://modelcontextprotocol.io/registry/quickstart |
 | `smithery.yaml` | Smithery stdio 部署格式：`startCommand.type: stdio` + `configSchema`（JSON Schema）+ `commandFunction`（`(config) => ({command, args, env})`）。本文件 `uvx jikeyan-mcp`，全部配置项可选 | https://smithery.ai （registry）及已部署的 stdio 范例；配置参考入口 https://smithery.ai/docs |
 | `llms.txt` | llms.txt v2 提案：H1 项目名 + blockquote 摘要 + H2 文件列表（含链接与说明） | https://llmstxt.org/ |
 
@@ -69,9 +69,10 @@ PyPI 账号恢复后，启用步骤：
    }
    ```
 
-   注意：`version` 须与 `server.json` 的 `version`、OCI 包的 `version`/identifier tag、
-   `mcp/pyproject.toml` 的 `version` 四处一致（CI 与 `scripts/check_manifests.py`
-   会校验；`check_manifests.py` 也要同步放宽为“OCI 必有、PyPI 可选”的检查）。
+   注意：PyPI 条目的 `version` 须与 `server.json` 顶层 `version`、OCI 包 identifier tag、
+   `mcp/pyproject.toml` 的 `version` 一致（OCI 包本身**不带** `version` 字段，不要加回来；
+   CI 与 `scripts/check_manifests.py` 会校验：OCI 条目不得有 `version`、
+   PyPI 条目必须有且一致；`scripts/release_versions.py` 同理）。
    PyPI 所有权验证靠包 README（含 PyPI 描述页）里的
    `mcp-name: <server-name>` 字符串——`mcp/README.md` 首部注释
    `<!-- mcp-name: io.github.871922384/jikeyan-agent-skill -->` 一直保留着，
@@ -99,16 +100,15 @@ workflow_dispatch）时先构建并推送 GHCR 镜像，再发布官方 MCP Regi
    `LABEL io.modelcontextprotocol.server.name` 值与 `server.json` 的 `name`
    完全一致（改名时两处一起改）。
 
-之后每次发版（四处版本号必须一致，否则 CI 直接失败）：
+之后每次发版（三处版本号必须一致，否则 CI 直接失败；OCI 包不带 `version` 字段）：
 
 - `mcp/pyproject.toml` 的 `version`
-- `server.json` 的 `version`
-- `server.json` 的 `packages[0].version`
+- `server.json` 的顶层 `version`
 - `server.json` 的 `packages[0].identifier` 的 tag（`ghcr.io/871922384/jikeyan-mcp:<version>`）
 
 ```bash
 git checkout main && git pull
-# 先把四处版本号改成新版本并提交，然后：
+# 先把三处版本号改成新版本并提交，然后：
 git tag v0.2.1 && git push origin v0.2.1
 ```
 
@@ -119,6 +119,7 @@ CI 链路（`ghcr` job → `mcp-registry` job）：
 - `mcp-registry` job（`needs: ghcr`）：匿名拉取 GHCR manifest 确认镜像可见
   （最多等 ~5 分钟）→ 按官方文档方式下载并 Sigstore 验签 `mcp-publisher`
   （版本 pin 在 workflow 的 `MCP_PUBLISHER_VERSION`）→
+  先 `mcp-publisher validate` 本地校验 `server.json` 通过再
   `mcp-publisher login github-oidc`（OIDC，无长期 token）→
   在仓库根目录 `mcp-publisher publish`（读取本仓库 `server.json`；
   发布时会校验镜像的 `io.modelcontextprotocol.server.name` label）→
@@ -226,8 +227,8 @@ MIT LICENSE、PyPI 包 `jikeyan-mcp 0.2.0`（它是魔搭/百炼托管的前置�
 1. 合并本分支到 `main`。
 2. 一次性操作：首次推送后把 GHCR 包设为公开（见 §3.2）。
 3. 在 GitHub 网页上设置 description / homepage / topics（见 §2）+ 上传社交预览图（见 §5）。
-4. 改四处版本号（`mcp/pyproject.toml`、`server.json` 的 `version`、
-   `packages[0].version` 与 identifier tag，四者必须一致）→ 提交 →
+4. 改三处版本号（`mcp/pyproject.toml`、`server.json` 顶层 `version`
+   与 identifier tag，三者必须一致；OCI 包不带 `version` 字段）→ 提交 →
    `git tag vX.Y.Z && git push origin vX.Y.Z`，
    CI 自动推 GHCR 镜像 + 发官方 MCP Registry（§3.2）；失败时看 Actions 日志，备选手动步骤见 §3.2 末尾一行。
 5. 发完验证（都不需要 PyPI）：

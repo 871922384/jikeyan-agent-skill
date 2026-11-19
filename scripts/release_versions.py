@@ -2,8 +2,12 @@
 
 Sources of truth:
   - mcp/pyproject.toml            -> project.version
-  - server.json                   -> version
-  - server.json packages[0]       -> version
+  - server.json                   -> version (top level, kept)
+  - server.json packages[0]       -> OCI: NO 'version' field allowed
+                                     (registry rejects it); version lives
+                                     in the identifier's OCI tag (after last ':').
+                                     Non-OCI (e.g. future PyPI entry): 'version'
+                                     field required and must match.
   - server.json packages[0]       -> identifier's OCI tag (after last ':')
 
 Usage:
@@ -43,7 +47,6 @@ def read_versions() -> dict[str, str]:
     try:
         package = server["packages"][0]
         server_version = server["version"]
-        package_version = package["version"]
         identifier = package["identifier"]
     except (KeyError, IndexError, TypeError) as exc:
         raise SystemExit(f"ERROR: unexpected server.json shape: {exc}") from exc
@@ -52,6 +55,24 @@ def read_versions() -> dict[str, str]:
             f"ERROR: packages[0].identifier has no OCI tag (no ':'): {identifier!r}"
         )
     oci_tag = identifier.rsplit(":", 1)[1]
+    registry_type = package.get("registryType", "")
+    if registry_type == "oci":
+        # Registry server-side validation rejects OCI packages carrying a
+        # 'version' field (400: "OCI packages must not have 'version' field").
+        if "version" in package:
+            raise SystemExit(
+                "ERROR: packages[0] is OCI but has a 'version' field; "
+                "remove it, version lives in the identifier tag only."
+            )
+        package_version: str = oci_tag
+    else:
+        try:
+            package_version = str(package["version"])
+        except KeyError:
+            raise SystemExit(
+                f"ERROR: packages[0] (registryType={registry_type!r}) "
+                "has no 'version' field; non-OCI packages require it."
+            ) from None
     return {
         "pyproject": str(pyproject_version),
         "server": str(server_version),
@@ -74,7 +95,9 @@ def check(expected: str, versions: dict[str, str]) -> list[str]:
         )
     if versions["package"] != expected:
         errors.append(
-            f"server.json packages[0].version ({versions['package']}) != expected ({expected})"
+            "server.json packages[0] package version "
+            f"({versions['package']}) != expected ({expected}) "
+            "(OCI: identifier tag; non-OCI: 'version' field)"
         )
     if versions["oci-tag"] != expected:
         errors.append(
